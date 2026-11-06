@@ -1,0 +1,11 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background-color: #f0f2f5; /* Thêm màu nền xám nhạt cho toàn web */
+}
+.custom-menu .ant-menu-item-selected { background-color: #00b578 !important; color: white !important; font-weight: bold; border-radius: 8px; }
