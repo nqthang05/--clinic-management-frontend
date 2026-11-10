@@ -173,6 +173,11 @@ const Appointments = () => {
             ),
         }
     ];
+    // Hàm chặn chọn ngày trong quá khứ (Dành cho Đặt lịch)
+    const disabledPastDate = (current) => {
+        // Nếu current nhỏ hơn bắt đầu của ngày hôm nay -> Khóa lại (return true)
+        return current && current < dayjs().startOf('day');
+    };
 
     return (
         <div>
@@ -204,7 +209,7 @@ const Appointments = () => {
                     <Form.Item name="doctorId" label="Bác Sĩ" rules={[{ required: true }]}>
                         <Select showSearch placeholder="Gõ tên bác sĩ..." filterOption={false} onSearch={searchDoctor} notFoundContent={fetchingDoctors ? <Spin size="small" /> : 'Không tìm thấy'} options={doctorOptions} />
                     </Form.Item>
-                    <Form.Item name="appointmentDate" label="Ngày Hẹn" rules={[{ required: true }]}><DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} /></Form.Item>
+                    <Form.Item name="appointmentDate" label="Ngày Hẹn" rules={[{ required: true }]}><DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} disabledDate={disabledPastDate} /></Form.Item>
                     <Form.Item name="appointmentTime" label="Giờ Hẹn" rules={[{ required: true }]}><TimePicker format="HH:mm" style={{ width: '100%' }} /></Form.Item>
                     <Form.Item name="reason" label="Lý do khám"><Input.TextArea rows={3} /></Form.Item>
                     <Form.Item><Button type="primary" htmlType="submit" block>Xác Nhận Đặt Lịch</Button></Form.Item>
@@ -220,7 +225,7 @@ const Appointments = () => {
                     <Form.Item name="doctorId" label="Bác Sĩ" rules={[{ required: true }]}>
                         <Select showSearch filterOption={false} onSearch={searchDoctor} options={doctorOptions} />
                     </Form.Item>
-                    <Form.Item name="appointmentDate" label="Ngày Hẹn" rules={[{ required: true }]}><DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} /></Form.Item>
+                    <Form.Item name="appointmentDate" label="Ngày Hẹn" rules={[{ required: true }]}><DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} disabledDate={disabledPastDate} /></Form.Item>
                     <Form.Item name="appointmentTime" label="Giờ Hẹn" rules={[{ required: true }]}><TimePicker format="HH:mm" style={{ width: '100%' }} /></Form.Item>
                     
                     {/* Khóa Select nếu trạng thái hiện tại là CANCELLED hoặc COMPLETED */}

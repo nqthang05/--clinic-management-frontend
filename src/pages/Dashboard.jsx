@@ -13,64 +13,66 @@ import { AuthContext } from '../context/AuthContext';
 
 const { Title, Text } = Typography;
 
-// ==========================================
-// DỮ LIỆU GIẢ LẬP CHO BIỂU ĐỒ (MOCK DATA)
-// ==========================================
-const statusData = [
-    { name: 'Đã lên lịch', value: 1 },
-    { name: 'Đã xác nhận', value: 2 },
-    { name: 'Đã hoàn thành', value: 5 },
-    { name: 'Đã hủy', value: 0 },
-];
 const STATUS_COLORS = ['#3182ce', '#dd6b20', '#38a169', '#e53e3e'];
 
-const trendData = [
-    { date: '20/11', count: 1 },
-    { date: '22/11', count: 3 },
-    { date: '24/11', count: 2 },
-    { date: '26/11', count: 6 },
-    { date: '28/11', count: 4 },
-    { date: '30/11', count: 7 },
-];
-
-const specialtyData = [
-    { name: 'Nội tổng quát', count: 4, percent: 36 },
-    { name: 'Tai - Mũi - Họng', count: 2, percent: 18 },
-    { name: 'Ngoại khoa', count: 1, percent: 9 },
-    { name: 'Sản phụ khoa', count: 1, percent: 9 },
-    { name: 'Nhi khoa', count: 1, percent: 9 },
-];
+// Dịch Status từ Backend sang Tiếng Việt cho mượt
+const STATUS_MAP = {
+    'PENDING': 'Chờ xác nhận',
+    'CONFIRMED': 'Đã xác nhận',
+    'COMPLETED': 'Khám xong',
+    'CANCELLED': 'Đã hủy'
+};
 
 const Dashboard = () => {
     const { user } = useContext(AuthContext);
     const [loading, setLoading] = useState(false);
     
-    // Dữ liệu tổng quan gọi từ API Backend thật
+    // State lưu trữ dữ liệu thực từ API Backend
     const [metrics, setMetrics] = useState({
         totalPatients: 0,
         totalActiveDoctors: 0,
         todayAppointments: 0,
-        currentMonthRevenue: 0
+        currentMonthRevenue: 0,
+        statusData: [],
+        trendData: [],
+        specialtyData: []
     });
 
     const fetchDashboardData = async () => {
         setLoading(true);
         try {
             const res = await axiosClient.get('/dashboard/overview');
-            setMetrics(res);
+            
+            // Format lại mảng statusData để dịch sang tiếng Việt trước khi render
+            const formattedStatusData = res.statusData?.map(item => ({
+                name: STATUS_MAP[item.name] || item.name,
+                value: item.value
+            })) || [];
+
+            // Ép kiểu tường minh để chắc chắn dữ liệu Tổng Bệnh Nhân được cập nhật
+            setMetrics({
+                totalPatients: res.totalPatients || 0,
+                totalActiveDoctors: res.totalActiveDoctors || 0,
+                todayAppointments: res.todayAppointments || 0,
+                currentMonthRevenue: res.currentMonthRevenue || 0,
+                statusData: formattedStatusData,
+                trendData: res.trendData || [],
+                specialtyData: res.specialtyData || []
+            });
         } catch (error) {
             message.error('Không thể lấy dữ liệu thống kê!');
         }
         setLoading(false);
     };
 
+    // Tự động fetch data khi vào trang (Dành cho Admin/Lễ tân)
     useEffect(() => {
         if (user?.role === 'ROLE_ADMIN' || user?.role === 'ROLE_RECEPTIONIST') {
             fetchDashboardData();
         }
     }, [user]);
 
-    // Màn hình chào mừng dành riêng cho BÁC SĨ
+    // Màn hình riêng cho Bác sĩ (Bác sĩ không xem thống kê doanh thu/bệnh nhân)
     if (user?.role === 'ROLE_DOCTOR') {
         return (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60vh', textAlign: 'center' }}>
@@ -81,7 +83,7 @@ const Dashboard = () => {
         );
     }
 
-    // MÀN HÌNH THỐNG KÊ CHO ADMIN / LỄ TÂN
+    // MÀN HÌNH CHÍNH CHO ADMIN / LỄ TÂN
     return (
         <div>
             {/* Header Dashboard */}
@@ -95,36 +97,48 @@ const Dashboard = () => {
                         <Text type="secondary">Theo dõi chỉ số vận hành (KPI), lưu lượng bệnh nhân thời gian thực</Text>
                     </div>
                 </div>
-                <Button icon={<SyncOutlined />} onClick={fetchDashboardData} loading={loading}>
+                <Button icon={<SyncOutlined />} onClick={fetchDashboardData} loading={loading} type="primary" ghost>
                     Làm mới số liệu
                 </Button>
             </div>
 
             <Spin spinning={loading}>
-                {/* DÒNG 1: 4 THẺ CHỈ SỐ TỔNG QUAN (Từ API Backend) */}
+                {/* DÒNG 1: 4 THẺ CHỈ SỐ TỔNG QUAN */}
                 <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
                     <Col xs={24} sm={12} lg={6}>
                         <StatCard 
-                            title="Tổng Hồ sơ Bệnh nhân" value={metrics.totalPatients}
-                            icon={<TeamOutlined />} color="#1890ff" subtext="Hồ sơ y tế lưu trữ"
+                            title="Tổng Hồ sơ Bệnh nhân" 
+                            value={metrics.totalPatients} 
+                            icon={<TeamOutlined />} 
+                            color="#1890ff" 
+                            subtext="Hồ sơ y tế đang lưu trữ" 
                         />
                     </Col>
                     <Col xs={24} sm={12} lg={6}>
                         <StatCard 
-                            title="Đội ngũ Bác sĩ" value={metrics.totalActiveDoctors}
-                            icon={<SolutionOutlined />} color="#52c41a" subtext="Chuyên khoa hoạt động"
+                            title="Đội ngũ Bác sĩ" 
+                            value={metrics.totalActiveDoctors} 
+                            icon={<SolutionOutlined />} 
+                            color="#52c41a" 
+                            subtext="Bác sĩ đang công tác" 
                         />
                     </Col>
                     <Col xs={24} sm={12} lg={6}>
                         <StatCard 
-                            title="Lịch hẹn Hôm nay" value={metrics.todayAppointments}
-                            icon={<CalendarOutlined />} color="#faad14" subtext="Ca đang chờ xử lý"
+                            title="Lịch hẹn Hôm nay" 
+                            value={metrics.todayAppointments} 
+                            icon={<CalendarOutlined />} 
+                            color="#faad14" 
+                            subtext="Tổng số ca khám trong ngày" 
                         />
                     </Col>
                     <Col xs={24} sm={12} lg={6}>
                         <StatCard 
-                            title="Doanh thu Tháng này" value={`${metrics.currentMonthRevenue.toLocaleString()} ₫`}
-                            icon={<DollarOutlined />} color="#eb2f96" subtext="Biến động so với tháng trước"
+                            title="Doanh thu Tháng này" 
+                            value={`${metrics.currentMonthRevenue.toLocaleString()} ₫`} 
+                            icon={<DollarOutlined />} 
+                            color="#eb2f96" 
+                            subtext="Dựa trên hóa đơn đã thanh toán" 
                         />
                     </Col>
                 </Row>
@@ -135,13 +149,13 @@ const Dashboard = () => {
                         <Card title={<><LineChartOutlined /> Biểu đồ Số lượng Lịch hẹn theo Trạng thái</>} bordered={false} style={{ borderRadius: 12, boxShadow: '0 2px 10px rgba(0,0,0,0.02)' }}>
                             <div style={{ width: '100%', height: 300 }}>
                                 <ResponsiveContainer>
-                                    <BarChart data={statusData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+                                    <BarChart data={metrics.statusData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
                                         <XAxis dataKey="name" axisLine={false} tickLine={false} />
                                         <YAxis axisLine={false} tickLine={false} />
                                         <Tooltip cursor={{fill: 'transparent'}} />
                                         <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                                            {statusData.map((entry, index) => (
+                                            {metrics.statusData.map((entry, index) => (
                                                 <Cell key={`cell-${index}`} fill={STATUS_COLORS[index % STATUS_COLORS.length]} />
                                             ))}
                                         </Bar>
@@ -155,8 +169,8 @@ const Dashboard = () => {
                             <div style={{ width: '100%', height: 200, display: 'flex', justifyContent: 'center' }}>
                                 <ResponsiveContainer>
                                     <PieChart>
-                                        <Pie data={statusData} innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
-                                            {statusData.map((entry, index) => (
+                                        <Pie data={metrics.statusData} innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
+                                            {metrics.statusData.map((entry, index) => (
                                                 <Cell key={`cell-${index}`} fill={STATUS_COLORS[index % STATUS_COLORS.length]} />
                                             ))}
                                         </Pie>
@@ -165,9 +179,9 @@ const Dashboard = () => {
                                 </ResponsiveContainer>
                             </div>
                             <div style={{ marginTop: 10 }}>
-                                {statusData.map((item, index) => (
+                                {metrics.statusData.map((item, index) => (
                                     <div key={item.name} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                                        <Text><span style={{ color: STATUS_COLORS[index], fontSize: 18, marginRight: 8 }}>•</span>{item.name}</Text>
+                                        <Text><span style={{ color: STATUS_COLORS[index % STATUS_COLORS.length], fontSize: 18, marginRight: 8 }}>•</span>{item.name}</Text>
                                         <Text strong>{item.value} ca</Text>
                                     </div>
                                 ))}
@@ -179,10 +193,10 @@ const Dashboard = () => {
                 {/* DÒNG 3: XU HƯỚNG & NHÂN SỰ */}
                 <Row gutter={[24, 24]}>
                     <Col xs={24} lg={16}>
-                        <Card title={<><LineChartOutlined /> Xu hướng Lịch hẹn theo Thời gian</>} bordered={false} style={{ borderRadius: 12, boxShadow: '0 2px 10px rgba(0,0,0,0.02)' }}>
+                        <Card title={<><LineChartOutlined /> Xu hướng Lịch hẹn 7 ngày qua</>} bordered={false} style={{ borderRadius: 12, boxShadow: '0 2px 10px rgba(0,0,0,0.02)' }}>
                             <div style={{ width: '100%', height: 300 }}>
                                 <ResponsiveContainer>
-                                    <AreaChart data={trendData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                                    <AreaChart data={metrics.trendData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                                         <defs>
                                             <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
                                                 <stop offset="5%" stopColor="#38b2ac" stopOpacity={0.8}/>
@@ -203,7 +217,7 @@ const Dashboard = () => {
                         <Card title={<><TeamOutlined /> Nhân sự theo Chuyên khoa</>} bordered={false} style={{ borderRadius: 12, boxShadow: '0 2px 10px rgba(0,0,0,0.02)' }}>
                             <List
                                 itemLayout="horizontal"
-                                dataSource={specialtyData}
+                                dataSource={metrics.specialtyData}
                                 renderItem={item => (
                                     <List.Item style={{ borderBottom: 'none', padding: '10px 0' }}>
                                         <div style={{ width: '100%' }}>
@@ -224,23 +238,23 @@ const Dashboard = () => {
     );
 };
 
-// Component thẻ Thống kê (StatCard)
+// ==========================================
+// CẬP NHẬT: ĐÃ XÓA NÚT "CHI TIẾT ->"
+// ==========================================
 const StatCard = ({ title, value, icon, color, subtext }) => (
     <Card style={{ borderRadius: '12px', boxShadow: '0 2px 10px rgba(0,0,0,0.04)', border: '1px solid #f0f0f0' }} bodyStyle={{ padding: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
                 <Text style={{ color: '#8c8c8c', fontSize: '14px', fontWeight: 500 }}>{title}</Text>
-                <Title level={2} style={{ margin: '8px 0', fontWeight: 'bold', color: '#2c3e50' }}>
-                    {value}
-                </Title>
+                <Title level={2} style={{ margin: '8px 0', fontWeight: 'bold', color: '#2c3e50' }}>{value}</Title>
             </div>
             <div style={{ backgroundColor: `${color}15`, padding: '12px', borderRadius: '50%', color: color, fontSize: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {icon}
             </div>
         </div>
-        <div style={{ marginTop: '16px', borderTop: '1px solid #f0f0f0', paddingTop: '12px', display: 'flex', justifyContent: 'space-between' }}>
+        {/* Chỉ hiển thị dòng text mô tả, hoàn toàn xóa bỏ thẻ Link "Chi tiết" */}
+        <div style={{ marginTop: '16px', borderTop: '1px solid #f0f0f0', paddingTop: '12px' }}>
             <Text type="secondary" style={{ fontSize: '12px' }}>{subtext}</Text>
-            <a style={{ fontSize: '12px', color: color }}>Chi tiết →</a>
         </div>
     </Card>
 );

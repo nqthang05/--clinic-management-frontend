@@ -127,6 +127,12 @@ const Patients = () => {
             ),
         }
     ];
+    // Hàm chặn chọn ngày trong tương lai (Dành cho Ngày sinh)
+    const disabledFutureDate = (current) => {
+        // current là ngày đang render trên lịch. 
+        // Nếu current lớn hơn cuối ngày hôm nay -> Khóa lại (return true)
+        return current && current > dayjs().endOf('day');
+    };
 
     return (
         <div>
@@ -154,7 +160,7 @@ const Patients = () => {
                 <Form form={createForm} layout="vertical" onFinish={handleCreate}>
                     <Form.Item name="fullName" label="Họ Tên" rules={[{ required: true }]}><Input /></Form.Item>
                     <Form.Item name="phone" label="Số điện thoại" rules={[{ required: true }]}><Input /></Form.Item>
-                    <Form.Item name="dob" label="Ngày sinh"><DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} /></Form.Item>
+                    <Form.Item name="dob" label="Ngày sinh"><DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} disabledDate={disabledFutureDate} /></Form.Item>
                     <Form.Item name="gender" label="Giới tính">
                         <Select placeholder="Chọn giới tính">
                             <Select.Option value="MALE">Nam</Select.Option>
@@ -173,7 +179,7 @@ const Patients = () => {
                 <Form form={editForm} layout="vertical" onFinish={handleUpdate}>
                     <Form.Item name="fullName" label="Họ Tên" rules={[{ required: true }]}><Input /></Form.Item>
                     <Form.Item name="phone" label="Số điện thoại" rules={[{ required: true }]}><Input /></Form.Item>
-                    <Form.Item name="dob" label="Ngày sinh"><DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} /></Form.Item>
+                    <Form.Item name="dob" label="Ngày sinh"><DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} disabledDate={disabledFutureDate}  /></Form.Item>
                     <Form.Item name="gender" label="Giới tính">
                         <Select>
                             <Select.Option value="MALE">Nam</Select.Option>
